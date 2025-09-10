@@ -1,0 +1,41 @@
+body {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+.nav-item {
+    transition: all 0.2s ease-in-out;
+}
+
+.nav-item.active {
+    color: #0D9488;
+    background-color: #F0FDFA; /* Teal-50 */
+    border-left: 4px solid #0D9488;
+}
+
+.nav-item:not(.active):hover {
+    background-color: #F1F5F9; /* Slate-100 */
+}
+
+/* Custom scrollbar for better aesthetics */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #d4d4d8;
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #a3a3a3;
+}
+
+.lang-btn.active {
+    background-color: #0D9488;
+    color: white;
+}

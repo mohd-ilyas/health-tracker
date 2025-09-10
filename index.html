@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Symptom Tracker & Triage Assistant</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    
+    <script>
+        // Tailwind configuration remains here as it's a script
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'primary': '#0D9488', // Teal-600
+                        'primary-focus': '#0F766E', // Teal-700
+                        'secondary': '#475569', // Slate-600
+                        'background': '#F8FAFC', // Slate-50
+                        'surface': '#FFFFFF',
+                        'accent': '#F59E0B', // Amber-500
+                        'danger': '#DC2626', // Red-600
+                        'text-primary': '#1E293B', // Slate-800
+                        'text-secondary': '#64748B', // Slate-500
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Telugu:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+<body class="bg-background font-sans text-text-primary">
+
+    <div id="login-page" class="flex items-center justify-center min-h-screen bg-background">
+        <div class="w-full max-w-md p-8 space-y-6 bg-surface rounded-xl shadow-lg border border-slate-200 m-4">
+            <div class="flex flex-col items-center">
+                <div class="p-3 bg-primary rounded-lg">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-heart-pulse"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/><path d="M3.22 12H9.5l.7-1.44.7 2.88.7-1.44H15"/></svg>
+                </div>
+                <h1 class="text-2xl font-bold text-primary mt-4" data-translate-key="appName">Symptomate</h1>
+                <p class="text-text-secondary mt-1" data-translate-key="signInToJournal">Sign in to your health journal</p>
+            </div>
+            <form id="login-form" class="space-y-6">
+                <div>
+                    <label for="email" class="block text-sm font-medium text-text-primary" data-translate-key="emailAddress">Email address</label>
+                        <input type="email" id="email" value="alex.doe@example.com" required class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" oninput="validateEmail()">
+                    </div>
+                <div>
+                    <label for="password" class="block text-sm font-medium text-text-primary" data-translate-key="password">Password</label>
+                        <input type="password" id="password" value="password" required class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" oninput="validatePassword()">
+                </div>
+                    <div id="login-error" style="height:1.5em; color: red;"></div>
+                <button type="submit" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-primary hover:bg-primary-focus focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary" data-translate-key="signIn">Sign In</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="app" class="hidden flex-col md:flex-row min-h-screen">
+        <nav class="bg-surface border-r border-slate-200 w-full md:w-64 flex-shrink-0">
+            <div class="p-4 flex items-center space-x-3 border-b border-slate-200">
+                <div class="p-2 bg-primary rounded-lg">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-heart-pulse"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/><path d="M3.22 12H9.5l.7-1.44.7 2.88.7-1.44H15"/></svg>
+                </div>
+                <h1 class="text-xl font-bold text-primary" data-translate-key="appName">Symptomate</h1>
+            </div>
+            <ul class="flex md:flex-col p-2 md:p-4 space-x-2 md:space-x-0 md:space-y-2">
+                <li><a href="#dashboard" class="nav-item flex items-center space-x-3 p-3 rounded-lg w-full active">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-layout-dashboard"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
+                    <span class="font-medium" data-translate-key="dashboard">Dashboard</span>
+                </a></li>
+                <li><a href="#log" class="nav-item flex items-center space-x-3 p-3 rounded-lg w-full">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-file-plus-2"><path d="M4 22h14a2 2 0 0 0 2-2V7l-5-5H6a2 2 0 0 0-2 2v4"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M3 15h6"/><path d="M6 12v6"/></svg>
+                    <span class="font-medium" data-translate-key="logSymptoms">Log Symptoms</span>
+                </a></li>
+                <li><a href="#trends" class="nav-item flex items-center space-x-3 p-3 rounded-lg w-full">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-trending-up"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+                    <span class="font-medium" data-translate-key="trends">Trends</span>
+                </a></li>
+                <li><a href="#triage" class="nav-item flex items-center space-x-3 p-3 rounded-lg w-full">
+                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-brain-circuit"><path d="M12 5a3 3 0 1 0-5.993.251"/><path d="M12 5a3 3 0 1 1 5.993.251"/><path d="M15 13a3 3 0 1 0-5.993.251"/><path d="M15 13a3 3 0 1 1 5.993.251"/><path d="M9 13a3 3 0 1 0-5.993.251"/><path d="M9 13a3 3 0 1 1 5.993.251"/><path d="M12 21a3 3 0 1 0-5.993.251"/><path d="M12 21a3 3 0 1 1 5.993.251"/><path d="M12 5v0a3 3 0 0 0-3 3v2a3 3 0 0 0 3 3v0a3 3 0 0 0 3-3V8a3 3 0 0 0-3-3Z"/><path d="M15 13v0a3 3 0 0 0-3 3v2a3 3 0 0 0 3 3v0a3 3 0 0 0 3-3v-2a3 3 0 0 0-3-3Z"/><path d="M9 13v0a3 3 0 0 0-3 3v2a3 3 0 0 0 3 3v0a3 3 0 0 0 3-3v-2a3 3 0 0 0-3-3Z"/></svg>
+                    <span class="font-medium" data-translate-key="triageAction">Triage/Action to Take</span>
+                </a></li>
+                <li><a href="#export" class="nav-item flex items-center space-x-3 p-3 rounded-lg w-full">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-share-2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/><line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/></svg>
+                    <span class="font-medium" data-translate-key="export">Export</span>
+                </a></li>
+                <li><a href="#profile" class="nav-item flex items-center space-x-3 p-3 rounded-lg w-full">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-user-circle-2"><path d="M18 20a6 6 0 0 0-12 0"/><circle cx="12" cy="10" r="4"/><circle cx="12" cy="12" r="10"/></svg>
+                    <span class="font-medium" data-translate-key="profile">Profile</span>
+                </a></li>
+            </ul>
+        </nav>
+
+        <main class="flex-1 p-4 sm:p-6 md:p-8 overflow-y-auto">
+            
+            <div class="flex justify-end mb-4">
+                <div class="flex border border-slate-300 rounded-lg">
+                    <button id="lang-en" class="lang-btn text-sm font-semibold py-1 px-3 rounded-l-md" data-lang="en">English</button>
+                    <button id="lang-te" class="lang-btn text-sm font-semibold py-1 px-3 rounded-r-md" data-lang="te">తెలుగు</button>
+                </div>
+            </div>
+
+            <section id="dashboard" class="page">
+                <header class="mb-8">
+                    <h2 class="text-3xl font-bold text-text-primary" data-translate-key="dashboard">Dashboard</h2>
+                    <p class="text-text-secondary mt-1" data-translate-key="welcomeBack">Welcome back, Alex. Here's your health summary for today.</p>
+                </header>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div class="lg:col-span-2 bg-surface rounded-xl shadow-sm p-6 border border-slate-200">
+                        <h3 class="font-semibold text-lg text-text-primary flex items-center" data-translate-key="aiTriageAssistant">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-bot mr-2 text-primary"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>
+                            AI Triage Assistant
+                        </h3>
+                        <div id="triage-output" class="mt-4 p-4 rounded-lg bg-slate-50 border border-slate-200">
+                           <p class="text-text-secondary" data-translate-key="noSymptomsToday">No symptoms logged for today. Go to the "Log Symptoms" page to add your first entry.</p>
+                        </div>
+                    </div>
+
+                    <div class="bg-surface rounded-xl shadow-sm p-6 border border-slate-200">
+                        <h3 class="font-semibold text-lg text-text-primary mb-4" data-translate-key="quickActions">Quick Actions</h3>
+                        <div class="space-y-3">
+                            <button id="quick-log-btn" class="w-full flex items-center justify-center bg-primary text-white font-semibold py-3 px-4 rounded-lg hover:bg-primary-focus transition-colors duration-200 shadow">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-plus-circle mr-2"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/><path d="M12 8v8"/></svg>
+                                <span data-translate-key="logTodaySymptoms">Log Today's Symptoms</span>
+                            </button>
+                             <button id="quick-export-btn" class="w-full flex items-center justify-center bg-secondary/10 text-secondary font-semibold py-3 px-4 rounded-lg hover:bg-secondary/20 transition-colors duration-200">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-share-2 mr-2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/><line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/></svg>
+                                <span data-translate-key="goToExport">Go to Export</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-8 bg-surface rounded-xl shadow-sm p-6 border border-slate-200">
+                    <h3 class="font-semibold text-lg text-text-primary mb-4" data-translate-key="todayLoggedSymptoms">Today's Logged Symptoms</h3>
+                    <div id="dashboard-symptom-list" class="space-y-3">
+                        <p class="text-text-secondary text-center py-4" data-translate-key="noSymptomsLoggedYet">No symptoms logged yet.</p>
+                    </div>
+                </div>
+            </section>
+
+            <section id="log" class="page hidden">
+                <header class="mb-8">
+                    <h2 class="text-3xl font-bold text-text-primary" data-translate-key="logSymptoms">Log Symptoms</h2>
+                    <p class="text-text-secondary mt-1" data-translate-key="addFeelingDetails">Add details about how you're feeling today.</p>
+                </header>
+                <div class="bg-surface rounded-xl shadow-sm p-6 md:p-8 border border-slate-200">
+                    <form id="symptom-form">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="md:col-span-2">
+                                <label for="symptom-description" class="block text-sm font-medium text-text-primary mb-2" data-translate-key="symptomDescription">Symptom Description</label>
+                                <input type="text" id="symptom-description" data-translate-key="symptomPlaceholder" placeholder="e.g., Sharp headache behind eyes" required class="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary">
+                            </div>
+
+                            <div>
+                                <label for="symptom-severity" class="block text-sm font-medium text-text-primary mb-2" data-translate-key="severity">Severity: <span id="severity-value" class="font-bold text-primary">5</span>/10</label>
+                                <input type="range" id="symptom-severity" min="1" max="10" value="5" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-primary">
+                            </div>
+                            
+                            <div>
+                                <label for="symptom-date" class="block text-sm font-medium text-text-primary mb-2" data-translate-key="date">Date</label>
+                                <input type="date" id="symptom-date" required class="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary">
+                            </div>
+
+                            <div class="md:col-span-2">
+                                <label for="symptom-notes" class="block text-sm font-medium text-text-primary mb-2" data-translate-key="additionalNotes">Additional Notes (Optional)</label>
+                                <textarea id="symptom-notes" rows="4" data-translate-key="notesPlaceholder" placeholder="e.g., Worsens with bright light, started after lunch." class="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"></textarea>
+                            </div>
+                        </div>
+                        <div class="mt-6 flex justify-end">
+                            <button type="submit" class="flex items-center justify-center bg-primary text-white font-semibold py-3 px-6 rounded-lg hover:bg-primary-focus focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-colors duration-200 shadow">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-plus mr-2"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                                <span data-translate-key="addSymptom">Add Symptom</span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </section>
+
+            <section id="trends" class="page hidden">
+                <header class="mb-8">
+                    <h2 class="text-3xl font-bold text-text-primary" data-translate-key="healthTrends">Health Trends</h2>
+                    <p class="text-text-secondary mt-1" data-translate-key="visualizeHistory">Visualize your symptom history over time.</p>
+                </header>
+                <div class="bg-surface rounded-xl shadow-sm p-6 border border-slate-200">
+                    <div class="h-96">
+                        <canvas id="trends-chart"></canvas>
+                    </div>
+                </div>
+            </section>
+            
+            <section id="triage" class="page hidden">
+                 <header class="mb-8">
+                    <h2 class="text-3xl font-bold text-text-primary" data-translate-key="triageActionTitle">Triage/Action to Take</h2>
+                    <p class="text-text-secondary mt-1" data-translate-key="triageActionSubtitle">Use the AI to analyze symptoms and suggest next steps.</p>
+                </header>
+                <div id="ml-demo-container" class="space-y-6">
+                    </div>
+            </section>
+            
+            <section id="export" class="page hidden">
+                 <header class="mb-8">
+                    <h2 class="text-3xl font-bold text-text-primary" data-translate-key="exportYourData">Export Your Data</h2>
+                    <p class="text-text-secondary mt-1" data-translate-key="exportSubtitle">Download your health information in various formats.</p>
+                </header>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div class="bg-surface rounded-xl shadow-sm p-6 border border-slate-200 flex flex-col">
+                        <h3 class="font-semibold text-lg text-text-primary" data-translate-key="fullHealthLog">Full Health Log</h3>
+                        <p class="text-text-secondary text-sm mt-2 flex-grow" data-translate-key="exportJsonDesc">Export all your data, including profile and symptom history, in JSON format. Best for backups or migrating.</p>
+                        <button id="export-json-btn" class="mt-4 w-full flex items-center justify-center bg-primary text-white font-semibold py-2 px-4 rounded-lg hover:bg-primary-focus transition-colors duration-200">
+                           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-braces mr-2"><path d="M8 3H7a2 2 0 0 0-2 2v5a2 2 0 0 1-2 2 2 2 0 0 1 2 2v5a2 2 0 0 0 2 2h1"/><path d="M16 21h1a2 2 0 0 0 2-2v-5a2 2 0 0 1 2-2 2 2 0 0 1-2-2V5a2 2 0 0 0-2-2h-1"/></svg>
+                            <span data-translate-key="exportAsJson">Export as JSON</span>
+                        </button>
+                    </div>
+                    <div class="bg-surface rounded-xl shadow-sm p-6 border border-slate-200 flex flex-col">
+                        <h3 class="font-semibold text-lg text-text-primary" data-translate-key="symptomHistory">Symptom History</h3>
+                        <p class="text-text-secondary text-sm mt-2 flex-grow" data-translate-key="exportCsvDesc">Download a CSV file of your symptom logs. Ideal for spreadsheets or sharing with a doctor.</p>
+                        <button id="export-csv-btn" class="mt-4 w-full flex items-center justify-center bg-primary text-white font-semibold py-2 px-4 rounded-lg hover:bg-primary-focus transition-colors duration-200">
+                           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-file-spreadsheet mr-2"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M8 11h8"/><path d="M8 16h8"/><path d="M11 11v8"/></svg>
+                            <span data-translate-key="exportAsCsv">Export as CSV</span>
+                        </button>
+                    </div>
+                     <div class="bg-surface rounded-xl shadow-sm p-6 border border-slate-200 flex flex-col">
+                        <h3 class="font-semibold text-lg text-text-primary" data-translate-key="printableSummary">Printable Summary</h3>
+                        <p class="text-text-secondary text-sm mt-2 flex-grow" data-translate-key="exportTxtDesc">Generate a simple text summary of your profile and recent symptoms. Easy to print or copy.</p>
+                        <button id="export-txt-btn" class="mt-4 w-full flex items-center justify-center bg-primary text-white font-semibold py-2 px-4 rounded-lg hover:bg-primary-focus transition-colors duration-200">
+                           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-printer mr-2"><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 9V3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v6"/><rect x="6" y="14" width="12" height="8" rx="1"/></svg>
+                            <span data-translate-key="exportAsTxt">Export as Text</span>
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <section id="profile" class="page hidden">
+                <header class="mb-8">
+                    <h2 class="text-3xl font-bold text-text-primary" data-translate-key="healthProfile">Health Profile</h2>
+                    <p class="text-text-secondary mt-1" data-translate-key="manageProfileInfo">Manage your personal and health information.</p>
+                </header>
+                <div class="bg-surface rounded-xl shadow-sm p-6 md:p-8 border border-slate-200">
+                    <form id="profile-form">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label for="profile-name" class="block text-sm font-medium text-text-primary mb-2" data-translate-key="fullName">Full Name</label>
+                                <input type="text" id="profile-name" value="Alex Doe" class="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary">
+                            </div>
+                            <div>
+                                <label for="profile-dob" class="block text-sm font-medium text-text-primary mb-2" data-translate-key="dob">Date of Birth</label>
+                                <input type="date" id="profile-dob" value="1990-05-15" class="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary">
+                            </div>
+                            <div class="md:col-span-2">
+                                <label for="profile-conditions" class="block text-sm font-medium text-text-primary mb-2" data-translate-key="knownConditions">Known Conditions</label>
+                                <input type="text" id="profile-conditions" data-translate-key="conditionsPlaceholder" placeholder="e.g., Asthma, Pollen Allergy" value="Pollen Allergy" class="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary">
+                            </div>
+                            <div class="md:col-span-2">
+                                <label for="profile-medications" class="block text-sm font-medium text-text-primary mb-2" data-translate-key="currentMedications">Current Medications</label>
+                                <input type="text" id="profile-medications" data-translate-key="medicationsPlaceholder" placeholder="e.g., Albuterol Inhaler" value="Loratadine 10mg" class="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary">
+                            </div>
+                             <div class="md:col-span-2">
+                                 <label class="block text-sm font-medium text-text-primary mb-2" data-translate-key="dataManagement">Data Management</label>
+                                <div class="flex space-x-4">
+                                     <button type="button" id="clear-data-btn" class="w-full flex items-center justify-center bg-danger/10 text-danger font-semibold py-3 px-4 rounded-lg hover:bg-danger/20 transition-colors duration-200" data-translate-key="clearAllData">
+                                         Clear All Data
+                                     </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-8 flex justify-end">
+                            <button type="submit" class="bg-primary text-white font-semibold py-3 px-6 rounded-lg hover:bg-primary-focus focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-colors duration-200 shadow" data-translate-key="saveChanges">
+                                Save Changes
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <div id="toast" class="fixed top-5 right-5 bg-primary text-white py-3 px-6 rounded-lg shadow-lg transform translate-x-[150%] transition-transform duration-300 ease-in-out">
+        <p>Toast message!</p>
+    </div>
+
+    <script type="module" src="script.js"></script>
+</body>
+</html>
